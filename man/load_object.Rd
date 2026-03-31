@@ -2,7 +2,7 @@
 % Please edit documentation in R/zzz.R
 \name{load_object}
 \alias{load_object}
-\title{Load object from OSF with BiocFileCache}
+\title{Load a dataset from OSF with BiocFileCache}
 \usage{
 load_object(
   osf_file_name,
@@ -11,17 +11,26 @@ load_object(
 )
 }
 \arguments{
-\item{osf_file_name}{Name of the file on OSF}
+\item{osf_file_name}{Character scalar. Dataset base name; see
+\code{\link{list_osf_files}}.}
 
-\item{bfc}{BiocFileCache object. Default creates one in package cache directory.}
+\item{bfc}{A \code{\link[BiocFileCache]{BiocFileCache}} object.
+Defaults to a per-user package cache.}
 }
 \value{
-The R object stored in the RDS file
+A \code{\link[SummarizedExperiment]{SummarizedExperiment}} or a
+\code{matrix}, depending on the dataset.
 }
 \description{
-Load object from OSF with BiocFileCache
+Validates \code{osf_file_name} against the bundled
+\file{inst/extdata/metadata.csv} (no internet connection required for
+validation). On first use the data files are downloaded from OSF and
+cached via \pkg{BiocFileCache}; subsequent calls load from the local
+cache.
 }
 \examples{
-data <- load_object("ROGeneLevelData.rds")
-data
+\dontrun{
+se <- load_object("ROGeneLevelData")
+se
+}
 }

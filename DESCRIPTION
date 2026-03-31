@@ -1,18 +1,27 @@
 Package: HumanRetinaLRSData
 Type: Package
 Title: Long-read RNA-seq gene count data from human retinal organoids
-Version: 0.99.4
+Version: 0.99.5
 Authors@R: c(
     person("Sowmya", "Parthiban", email = "sparthi1@jhu.edu", role = c("aut", "cre")))
 Description: Dataset package containing gene and isoform count matrices,
-  and sample metadata for long-read direct cDNA sequencing of human retinal organoid, 2D retinal ganglion cell cultures, and flowthrough from H9 and EP1 cell-lines.
+    and sample metadata for long-read direct cDNA sequencing of human retinal
+    organoids, 2D retinal ganglion cell (RGC) cultures, and flowthrough
+    fractions from H9 and EP1 iPSC cell lines. Data were generated using
+    Oxford Nanopore Technology (ONT) direct cDNA sequencing and mapped to
+    the GRCh38 reference genome (GENCODE v46 annotation). The package provides
+    accessor functions returning SummarizedExperiment objects for gene-level
+    counts, isoform-level counts, and a matrix of allele-specific expression
+    (ASE) gene counts. Data files are stored in flat CSV format in an Open
+    Science Framework (OSF) repository and cached locally via BiocFileCache.
 License: MIT + file LICENSE
 Encoding: UTF-8
-LazyData: true
+URL: https://github.com/sparthib/HumanRetinaLrsData
+BugReports: https://github.com/sparthib/HumanRetinaLrsData/issues
 biocViews: ExperimentData, RNASeqData, ExpressionData, Homo_sapiens_Data, CellCulture
 RoxygenNote: 7.3.2
 Depends:
-    R (>= 4.4.0),
+    R (>= 4.6.0),
     SummarizedExperiment
 Imports:
     osfr,
@@ -21,8 +30,6 @@ Suggests:
     testthat,
     knitr,
     rmarkdown,
-    dplyr,
     ggplot2,
     ggrepel
 VignetteBuilder: knitr
-

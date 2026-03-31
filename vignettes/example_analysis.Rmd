@@ -7,170 +7,138 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r setup, include=FALSE}
+```{r knitr-setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Required packages
+
+```{r load-packages}
 library(HumanRetinaLRSData)
 library(SummarizedExperiment)
-library(dplyr)
 library(ggplot2)
 library(ggrepel)
 ```
 
 ## Overview
 
-`HumanRetinaLRSData` is a companion data package for our long-read sequencing study characterizing isoform diversity, splicing dynamics, and allele-specific expression in developing human retinal organoids.
+`HumanRetinaLRSData` is a companion data package for our long-read
+sequencing study characterising isoform diversity, splicing dynamics,
+and allele-specific expression in developing human retinal organoids.
 
-In this study, we used nanopore-based long-read RNA sequencing to profile human stem cell-derived retinal organoids across multiple developmental stages, as well as purified retinal ganglion cells. These datasets enable exploration of gene- and isoform-level expression patterns, detection of differential isoform usage, identification of neuron-specific splicing programs, and quantification of allelic imbalance.
+In this study we used nanopore-based long-read RNA sequencing to profile
+human stem cell-derived retinal organoids across multiple developmental
+stages, as well as purified retinal ganglion cells. These datasets enable
+exploration of gene- and isoform-level expression patterns, detection of
+differential isoform usage, identification of neuron-specific splicing
+programs, and quantification of allelic imbalance.
 
-All raw and processed data generated in the study have been deposited in an Open Science Framework (OSF) [repository](https://osf.io/z2yvs/overview). The `HumanRetinaLRSData` package provides convenient access to these files directly from the OSF node using the `osfr` package.
+All raw and processed data generated in the study have been deposited in
+an Open Science Framework (OSF)
+[repository](https://osf.io/z2yvs/overview). The `HumanRetinaLRSData`
+package provides convenient access to these files directly from the OSF
+node using the `osfr` package.
 
-For ease of use, HumanRetinaLRSData is designed to:
+For ease of use, `HumanRetinaLRSData` is designed to:
 
--   query and retrieve study datasets from the OSF project,
+- query and retrieve study datasets from the OSF project,
+- cache downloaded archives via `BiocFileCache`, and
+- load gene- and isoform-level counts into R for downstream
+  visualisation and analysis.
 
--   cache downloaded archives via `BiocFileCache`, and
-
--   load gene- and isoform-level counts into R for downstream visualization and analysis.
-
-## Load Data
-
-First, we load the gene-level and isoform-level data:
+## Load data
 
 ```{r load-data}
-se_gene <- ROGeneLevelData()
-se_isoform <- ROIsoformLevelData()
+se_gene     <- ROGeneLevelData()
+se_isoform  <- ROIsoformLevelData()
 ```
 
-## Define PCA Plotting Function
+## Visualise gene-level expression
 
-To avoid code duplication, we create a reusable function for generating PCA plots:
-
-```{r pca-function}
-#' Plot PCA from SummarizedExperiment Object
-#'
-#' @param se SummarizedExperiment object containing expression data
-#' @param assay_name Name of the assay to use (default: "cpm")
-#' @param color_by Column name in colData to color points by (default: "stage")
-#' @param title_prefix Text to include in plot title
-#' @param color_mapping Named vector of colors for each group
-#' @return A ggplot object
-plot_pca <- function(se, 
-                     assay_name = "cpm",
-                     color_by = "stage",
-                     title_prefix = "Expression",
-                     color_mapping = NULL) {
-  
-  # Extract expression data
-  expr_data <- assay(se, assay_name)
-  
-  # Perform PCA on log-transformed CPM values
-  pca_result <- prcomp(t(log2(expr_data + 1)), scale = TRUE)
-  
-  # Create data frame with PC coordinates
-  pca_df <- data.frame(
-    PC1 = pca_result$x[, 1],
-    PC2 = pca_result$x[, 2],
-    sample = colnames(expr_data),
-    group = colData(se)[[color_by]]
-  )
-  
-  # Calculate variance explained
-  var_explained <- pca_result$sdev^2 / sum(pca_result$sdev^2) * 100
-  
-  # Set default color mapping if not provided
-  if (is.null(color_mapping)) {
-    color_mapping <- c("stage 1" = "orange", 
-                       "stage 2" = "seagreen",
-                       "stage 3" = "purple")
-  }
-  
-  # Calculate axis extensions for label space
-  x_range <- range(pca_df$PC1)
-  y_range <- range(pca_df$PC2)
-  x_extend <- diff(x_range) * 0.1
-  y_extend <- diff(y_range) * 0.1
-  
-  # Create plot
-  p <- ggplot(pca_df, aes(x = PC1, y = PC2, color = group)) +
-    geom_point(size = 3) +
-    geom_label_repel(
-      aes(label = sample),
-      size = 2.5,
-      fill = "white",
-      alpha = 0.7,
-      max.overlaps = Inf,
-      box.padding = 0.5,
-      point.padding = 0.3,
-      segment.color = "grey50",
-      show.legend = FALSE
-    ) +
-    scale_color_manual(values = color_mapping, name = "Stage") +
-    xlim(x_range[1] - x_extend, x_range[2] + x_extend) +
-    ylim(y_range[1] - y_extend, y_range[2] + y_extend) +
-    labs(
-      title = paste("PCA of", title_prefix),
-      x = paste0("PC1 (", round(var_explained[1], 1), "%)"),
-      y = paste0("PC2 (", round(var_explained[2], 1), "%)")
-    ) +
-    theme_bw(base_size = 12) +
-    theme(
-      plot.title = element_text(hjust = 0.5, face = "bold"),
-      legend.position = "right"
-    ) +
-    guides(color = guide_legend(override.aes = list(size = 4)))
-  
-  return(p)
-}
-```
-
-## Visualize Gene-Level Expression
-
-Now we can easily create a PCA plot for gene-level data:
+We perform PCA on log2-transformed CPM values and colour samples by
+developmental stage.
 
 ```{r plot-gene-pca, fig.width=8, fig.height=6}
-# Define color scheme
-stage_colors <- c("stage 1" = "orange", 
-                  "stage 2" = "seagreen",
-                  "stage 3" = "purple")
-
-# Plot gene-level PCA
-plot_gene <- plot_pca(
-  se = se_gene,
-  assay_name = "cpm",
-  color_by = "stage",
-  title_prefix = "Gene-Level Expression",
-  color_mapping = stage_colors
+stage_colors <- c(
+  "stage 1" = "orange",
+  "stage 2" = "seagreen",
+  "stage 3" = "purple"
 )
 
-print(plot_gene)
+expr_gene <- assay(se_gene, "cpm")
+pca_gene  <- prcomp(t(log2(expr_gene + 1)), scale. = TRUE)
+var_gene  <- round(
+  pca_gene$sdev^2 / sum(pca_gene$sdev^2) * 100, 1
+)
+
+pca_df_gene <- data.frame(
+  PC1    = pca_gene$x[, 1],
+  PC2    = pca_gene$x[, 2],
+  sample = colnames(expr_gene),
+  stage  = colData(se_gene)[["stage"]]
+)
+
+ggplot(pca_df_gene, aes(x = PC1, y = PC2, color = stage)) +
+  geom_point(size = 3) +
+  geom_label_repel(
+    aes(label = sample),
+    size = 2.5, show.legend = FALSE
+  ) +
+  scale_color_manual(values = stage_colors, name = "Stage") +
+  labs(
+    title = "PCA of Gene-Level Expression",
+    x     = paste0("PC1 (", var_gene[1], "%)"),
+    y     = paste0("PC2 (", var_gene[2], "%)")
+  ) +
+  theme_bw(base_size = 12)
 ```
 
-## Visualize Isoform-Level Expression
-
-We can use the same function to plot isoform-level data:
+## Visualise isoform-level expression
 
 ```{r plot-isoform-pca, fig.width=8, fig.height=6}
-# Plot isoform-level PCA
-plot_isoform <- plot_pca(
-  se = se_isoform,
-  assay_name = "cpm",
-  color_by = "stage",
-  title_prefix = "Isoform-Level Expression",
-  color_mapping = stage_colors
+expr_iso <- assay(se_isoform, "cpm")
+pca_iso  <- prcomp(t(log2(expr_iso + 1)), scale. = TRUE)
+var_iso  <- round(
+  pca_iso$sdev^2 / sum(pca_iso$sdev^2) * 100, 1
 )
 
-print(plot_isoform)
+pca_df_iso <- data.frame(
+  PC1    = pca_iso$x[, 1],
+  PC2    = pca_iso$x[, 2],
+  sample = colnames(expr_iso),
+  stage  = colData(se_isoform)[["stage"]]
+)
+
+ggplot(pca_df_iso, aes(x = PC1, y = PC2, color = stage)) +
+  geom_point(size = 3) +
+  geom_label_repel(
+    aes(label = sample),
+    size = 2.5, show.legend = FALSE
+  ) +
+  scale_color_manual(values = stage_colors, name = "Stage") +
+  labs(
+    title = "PCA of Isoform-Level Expression",
+    x     = paste0("PC1 (", var_iso[1], "%)"),
+    y     = paste0("PC2 (", var_iso[2], "%)")
+  ) +
+  theme_bw(base_size = 12)
 ```
 
 ## Interpretation
 
 The PCA plots reveal:
 
--   **Separation by stage**: Samples cluster by developmental stage, indicating distinct expression profiles
--   **Variance explained**: PC1 and PC2 capture the major sources of variation in the dataset
--   **Gene vs. Isoform**: While samples cluster similarly by developmental stage at both levels, the proportion of variance explained by each PC differs. This reflects that isoform-level analysis may capture additional complexity from alternative splicing and transcript variation beyond what is seen at the gene level.
+- **Separation by stage**: Samples cluster by developmental stage,
+  indicating distinct expression profiles.
+- **Variance explained**: PC1 and PC2 capture the major sources of
+  variation in the dataset.
+- **Gene vs. isoform**: While samples cluster similarly by developmental
+  stage at both levels, the proportion of variance explained by each PC
+  differs. This reflects that isoform-level analysis may capture
+  additional complexity from alternative splicing and transcript
+  variation beyond what is seen at the gene level.
 
-## Session Information
+## Session information
 
 ```{r session-info}
 sessionInfo()
