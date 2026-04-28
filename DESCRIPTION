@@ -1,7 +1,7 @@
 Package: HumanRetinaLRSData
 Type: Package
 Title: Long-read RNA-seq gene count data from human retinal organoids
-Version: 1.0.0
+Version: 1.1.0
 Authors@R: c(
     person("Sowmya", "Parthiban", email = "sparthi1@jhu.edu", role = c("aut", "cre")))
 Description: Dataset package containing gene and isoform count matrices,
